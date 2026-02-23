@@ -30,8 +30,9 @@ class GitHubService
 
         $options = [
             'http' => [
-                'method' => $method,
-                'header' => implode("\r\n", $headers),
+                'method'  => $method,
+                'header'  => implode("\r\n", $headers),
+                'ignore_errors' => true // IMPORTANT: allows reading response on 4xx/5xx
             ]
         ];
 
@@ -41,17 +42,39 @@ class GitHubService
         }
 
         $context = stream_context_create($options);
-        $response = @file_get_contents($url, false, $context);
+        $response = file_get_contents($url, false, $context);
 
         if ($response === false) {
-            throw new Exception("GitHub API request failed.");
+            throw new \Exception("GitHub API request failed: Unable to connect.");
         }
+
+        $statusLine = $http_response_header[0] ?? '';
+        preg_match('{HTTP/\S*\s(\d{3})}', $statusLine, $match);
+        $statusCode = $match[1] ?? 0;
 
         $decoded = json_decode($response, true);
 
-        if (isset($decoded['message'])) {
-            // GitHub error message
-            throw new Exception("GitHub Error: " . $decoded['message']);
+        if ($statusCode >= 400) {
+            $message = $decoded['message'] ?? 'Unknown error';
+
+            if ($statusCode == 401) {
+                throw new \Exception("Unauthorized: Access token invalid or expired.");
+            }
+
+            if ($statusCode == 403) {
+                // Possible rate limit
+                throw new \Exception("Forbidden: Possibly rate limited or insufficient permissions.");
+            }
+
+            if ($statusCode == 404) {
+                throw new \Exception("Repository not found.");
+            }
+
+            if ($statusCode >= 500) {
+                throw new \Exception("GitHub server error ({$statusCode}).");
+            }
+
+            throw new \Exception("GitHub error ({$statusCode}): {$message}");
         }
 
         return $decoded;
