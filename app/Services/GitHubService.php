@@ -1,6 +1,8 @@
 <?php
 namespace Services;
 
+use Exception;
+
 class GitHubService
 {
     private string $baseUrl = 'https://api.github.com';

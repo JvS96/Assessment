@@ -6,6 +6,7 @@ use Core\Session;
 use Core\Csrf;
 use Core\Request;
 use Core\Response;
+use Core\Validator;
 use Services\GitHubService;
 use Services\IssueService;
 use Throwable;
@@ -47,16 +48,33 @@ class IssueApiController
             return Response::json(['error' => 'Invalid CSRF'], 403);
         }
 
+        $data = [
+            'title'    => $request->input('title'),
+            'body'     => $request->input('body'),
+            'client'   => $request->input('client'),
+            'priority' => $request->input('priority'),
+            'type'     => $request->input('type'),
+        ];
+
+        $errors = Validator::validateIssue($data);
+
+        if (!empty($errors)) {
+            return Response::json([
+                'error' => 'Validation failed',
+                'fields' => $errors
+            ], 422);
+        }
+
         $service = new IssueService(
             new GitHubService(Session::get('access_token'))
         );
 
         $issue = $service->create(
-            $request->input('title'),
-            $request->input('body'),
-            $request->input('client'),
-            $request->input('priority'),
-            $request->input('type')
+            $data['title'],
+            $data['body'],
+            $data['client'],
+            $data['priority'],
+            $data['type']
         );
 
         return Response::json($issue->toArray(), 200);
