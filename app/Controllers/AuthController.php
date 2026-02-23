@@ -3,8 +3,6 @@
 namespace Controllers;
 
 use Core\Session;
-use Core\Csrf;
-use Core\Request;
 use Core\Response;
 use Services\GitHubService;
 
@@ -15,53 +13,51 @@ class AuthController
         Session::start();
 
         $state = bin2hex(random_bytes(16));
-        $_SESSION['oauth_state'] = $state;
+        Session::set('oauth_state', $state);
 
         $params = http_build_query([
-            'client_id' => \env('GITHUB_CLIENT_ID'),
-            'redirect_uri' => \env('GITHUB_REDIRECT_URI'),
-            'scope' => 'repo',
-            'state' => $state
+            'client_id'     => env('GITHUB_CLIENT_ID'),
+            'redirect_uri'  => env('GITHUB_REDIRECT_URI'),
+            'scope'         => 'repo',
+            'state'         => $state
         ]);
 
         header("Location: https://github.com/login/oauth/authorize?$params");
+        exit;
     }
 
     public function callback()
     {
         Session::start();
 
-        if (!isset($_GET['state']) || $_GET['state'] !== $_SESSION['oauth_state']) {
-            die("Invalid OAuth state.");
+        $state = $_GET['state'] ?? null;
+        $storedState = Session::get('oauth_state');
+
+        if (!$state || $state !== $storedState) {
+            return Response::json(['error' => 'Invalid OAuth state'], 400);
         }
 
         $code = $_GET['code'] ?? null;
 
         if (!$code) {
-            die("Authorization code missing.");
+            return Response::json(['error' => 'Authorization code missing'], 400);
         }
 
-        $response = file_get_contents('https://github.com/login/oauth/access_token', false, stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\nAccept: application/json\r\n",
-                'content' => json_encode([
-                    'client_id' => \env('GITHUB_CLIENT_ID'),
-                    'client_secret' => \env('GITHUB_CLIENT_SECRET'),
-                    'code' => $code
-                ])
-            ]
-        ]));
+        try {
+            $gitHub = new GitHubService('');
+            $accessToken = $gitHub->exchangeCodeForToken($code);
 
-        $data = json_decode($response, true);
+            Session::regenerate();
+            Session::set('access_token', $accessToken);
 
-        if (!isset($data['access_token'])) {
-            die("Failed to retrieve access token.");
+            header('Location: /issue.php');
+            exit;
+
+        } catch (\Throwable $e) {
+            return Response::json([
+                'error' => 'OAuth failed',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        Session::regenerate();
-        Session::set('access_token', $data['access_token']);
-
-        header("Location: /issue.php");
     }
 }

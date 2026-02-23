@@ -86,4 +86,35 @@ class GitHubService
             ]
         );
     }
+
+    public function exchangeCodeForToken(string $code): string
+    {
+        $response = file_get_contents(
+            'https://github.com/login/oauth/access_token',
+            false,
+            stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-Type: application/json\r\nAccept: application/json\r\n",
+                    'content' => json_encode([
+                        'client_id' => env('GITHUB_CLIENT_ID'),
+                        'client_secret' => env('GITHUB_CLIENT_SECRET'),
+                        'code' => $code
+                    ])
+                ]
+            ])
+        );
+
+        if ($response === false) {
+            throw new \Exception('Failed to contact GitHub.');
+        }
+
+        $data = json_decode($response, true);
+
+        if (!isset($data['access_token'])) {
+            throw new \Exception('Access token not returned.');
+        }
+
+        return $data['access_token'];
+    }
 }
