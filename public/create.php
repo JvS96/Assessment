@@ -153,9 +153,9 @@ $csrfToken = Csrf::generateToken();
         <label>Type</label>
         <select id="type">
             <option value="">Select Type</option>
-            <option>Bug</option>
-            <option>Support</option>
-            <option>Enhancement</option>
+            <option value="Bug">Bug</option>
+            <option value="Feature">Feature</option>
+            <option value="Task">Task</option>>
         </select>
         <div class="error-text" id="typeError"></div>
     </div>
