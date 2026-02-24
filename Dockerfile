@@ -6,6 +6,9 @@ RUN a2enmod rewrite
 # Set working directory
 WORKDIR /var/www/html
 
+# Copy project files into container
+COPY . /var/www/html
+
 # Change Apache DocumentRoot to /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
