@@ -1,18 +1,26 @@
 <?php
 
-function env($key)
+function env($key, $default = null)
 {
+    $value = getenv($key);
+    if ($value !== false) {
+        return $value;
+    }
+
+    if (isset($_ENV[$key])) {
+        return $_ENV[$key];
+    }
     static $env = null;
 
     if ($env === null) {
         $path = __DIR__ . '/../.env';
 
-        if (!file_exists($path)) {
-            throw new Exception('.env file not found');
+        if (file_exists($path)) {
+            $env = parse_ini_file($path);
+        } else {
+            $env = [];
         }
-
-        $env = parse_ini_file($path);
     }
 
-    return $env[$key] ?? null;
+    return $env[$key] ?? $default;
 }
