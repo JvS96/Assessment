@@ -32,7 +32,7 @@ class GitHubService
             'http' => [
                 'method'  => $method,
                 'header'  => implode("\r\n", $headers),
-                'ignore_errors' => true // IMPORTANT: allows reading response on 4xx/5xx
+                'ignore_errors' => true
             ]
         ];
 

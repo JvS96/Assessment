@@ -8,9 +8,9 @@ class Session
 
             session_set_cookie_params([
                 'lifetime' => 0,
-                'path' => '/',        // IMPORTANT
+                'path' => '/',
                 'domain' => '',
-                'secure' => true,     // since using ngrok HTTPS
+                'secure' => true,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);
